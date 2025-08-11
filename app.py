@@ -60,19 +60,31 @@ elif auth_status is None:
 # Logged-in UI
 authenticator.logout(location="sidebar")
 st.sidebar.write(f"Hello, **{name}**")
+# ===== Robust merchant mapping (case-insensitive)
+users_cfg = st.secrets.get("users", {})
+username = st.session_state.get("username")
 
-# ===== Robust merchant mapping (prevents 'Merchant mapping not found' confusion)
-merchant_rec = users_cfg.get(username)
+def get_user_record(cfg: dict, uname: str):
+    if uname in cfg:
+        return cfg[uname]
+    # case-insensitive fallback
+    uname_cf = str(uname).casefold()
+    for k, v in cfg.items():
+        if str(k).casefold() == uname_cf:
+            return v
+    return None
+
+merchant_rec = get_user_record(users_cfg, username)
 if not merchant_rec or "merchant_id" not in merchant_rec:
     st.error(
-        "Merchant mapping not found for this user.\n"
-        f"Got username = '{username}'.\n"
-        f"Available users = {list(users_cfg.keys())}.\n"
-        "Check App → Settings → Secrets and ensure this username block exists and has 'merchant_id'."
+        "Merchant mapping not found for this user. "
+        f"Got username='{username}'. Available users: {list(users_cfg.keys())}. "
+        "Check App → Settings → Secrets."
     )
     st.stop()
 
 merchant_id = merchant_rec["merchant_id"]
+
 
 # =========================
 # Load transactions CSV
